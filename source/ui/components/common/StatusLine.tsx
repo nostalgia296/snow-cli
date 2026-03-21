@@ -693,15 +693,12 @@ export default function StatusLine({
 			{/* IDE连接状态 */}
 			{vscodeConnectionStatus &&
 				(vscodeConnectionStatus === 'connecting' ||
-					vscodeConnectionStatus === 'connected' ||
-					vscodeConnectionStatus === 'error') && (
+					vscodeConnectionStatus === 'connected') && (
 					<Box>
 						<Text
 							color={
 								vscodeConnectionStatus === 'connecting'
 									? 'yellow'
-									: vscodeConnectionStatus === 'error'
-									? 'gray'
 									: 'green'
 							}
 							dimColor
@@ -710,8 +707,6 @@ export default function StatusLine({
 								<>
 									<Spinner type="dots" /> {t.chatScreen.ideConnecting}
 								</>
-							) : vscodeConnectionStatus === 'error' ? (
-								<>○ {t.chatScreen.ideError}</>
 							) : (
 								<>
 									● {t.chatScreen.ideConnected}
