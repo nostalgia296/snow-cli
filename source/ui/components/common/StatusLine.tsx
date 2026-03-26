@@ -734,45 +734,38 @@ export default function StatusLine({
 				</Box>
 			)}
 
-			{vscodeConnectionStatus &&
-				(vscodeConnectionStatus === 'connecting' ||
-					vscodeConnectionStatus === 'connected' ||
-					vscodeConnectionStatus === 'error') && (
-					<Box>
-						<Text
-							color={
-								vscodeConnectionStatus === 'connecting'
-									? 'yellow'
-									: vscodeConnectionStatus === 'error'
-									? 'gray'
-									: 'green'
-							}
-							dimColor
-						>
-							{vscodeConnectionStatus === 'connecting' ? (
-								<>
-									<Spinner type="dots" /> {t.chatScreen.ideConnecting}
-								</>
-							) : vscodeConnectionStatus === 'error' ? (
-								<>○ {t.chatScreen.ideError}</>
-							) : (
-								<>
-									● {t.chatScreen.ideConnected}
-									{editorContext?.activeFile &&
-										t.chatScreen.ideActiveFile.replace(
-											'{file}',
-											smartTruncatePath(editorContext.activeFile, 40, false),
-										)}
-									{editorContext?.selectedText &&
-										t.chatScreen.ideSelectedText.replace(
-											'{count}',
-											editorContext.selectedText.length.toString(),
-										)}
-								</>
-							)}
-						</Text>
-					</Box>
-				)}
+    {vscodeConnectionStatus &&
+        (vscodeConnectionStatus === 'connecting' ||
+         vscodeConnectionStatus === 'connected') && (
+                <Box>
+                    <Text
+                        color={
+                            vscodeConnectionStatus === 'connecting' ? 'yellow' : 'green'
+                }
+                dimColor
+            >
+                {vscodeConnectionStatus === 'connecting' ? (
+                    <>
+                        <Spinner type="dots" /> {t.chatScreen.ideConnecting}
+                    </>
+                ) : (
+                    <>
+                        ● {t.chatScreen.ideConnected}
+                        {editorContext?.activeFile &&
+                            t.chatScreen.ideActiveFile.replace(
+                                '{file}',
+                                smartTruncatePath(editorContext.activeFile, 40, false),
+                            )}
+                        {editorContext?.selectedText &&
+                            t.chatScreen.ideSelectedText.replace(
+                                '{count}',
+                                editorContext.selectedText.length.toString(),
+                            )}
+                    </>
+                )}
+            </Text>
+        </Box>
+    )}
 
 			{connectionStatus &&
 				(connectionStatus === 'connecting' ||
