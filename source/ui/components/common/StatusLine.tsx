@@ -760,12 +760,12 @@ export default function StatusLine({
 									{editorContext?.activeFile &&
 										t.chatScreen.ideActiveFile.replace(
 											'{file}',
-											smartTruncatePath(editorContext.activeFile, 40, false),
+											smartTruncatePath(editorContext?.activeFile, 40, false),
 										)}
 									{editorContext?.selectedText &&
 										t.chatScreen.ideSelectedText.replace(
 											'{count}',
-											editorContext.selectedText.length.toString(),
+											editorContext?.selectedText.length.toString(),
 										)}
 								</>
 							)}
