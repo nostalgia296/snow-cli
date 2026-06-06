@@ -843,8 +843,6 @@ export default function StatusLine({
 							color={
 								vscodeConnectionStatus === 'connecting'
 									? 'yellow'
-									: vscodeConnectionStatus === 'error'
-									? 'gray'
 									: 'green'
 							}
 							dimColor
