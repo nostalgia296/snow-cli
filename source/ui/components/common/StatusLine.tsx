@@ -837,7 +837,7 @@ export default function StatusLine({
 			{vscodeConnectionStatus &&
 				!isBuiltinOverridden(BUILTIN_STATUSLINE_IDS.ideConnection) &&
 				(vscodeConnectionStatus === 'connecting' ||
-					vscodeConnectionStatus === 'connected' && (
+					vscodeConnectionStatus === 'connected') && (
 					<Box>
 						<Text
 							color={
