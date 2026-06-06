@@ -1,0 +1,44 @@
+name: Publish to NPM
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: |
+            npm run build
+            tar -cf bundle.tar bundle
+
+      - name: Release "elf"
+        uses: softprops/action-gh-release@v1
+        with:
+          body: 自用版
+          tag_name: mod
+          name: Release
+          files: |
+           ./bundle.tar
