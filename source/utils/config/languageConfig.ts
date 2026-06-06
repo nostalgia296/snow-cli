@@ -12,7 +12,7 @@ interface LanguageConfig {
 }
 
 const DEFAULT_CONFIG: LanguageConfig = {
-	language: 'en',
+	language: 'zh',
 };
 
 function ensureConfigDirectory(): void {

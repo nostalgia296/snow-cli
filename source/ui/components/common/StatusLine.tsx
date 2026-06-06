@@ -837,8 +837,7 @@ export default function StatusLine({
 			{vscodeConnectionStatus &&
 				!isBuiltinOverridden(BUILTIN_STATUSLINE_IDS.ideConnection) &&
 				(vscodeConnectionStatus === 'connecting' ||
-					vscodeConnectionStatus === 'connected' ||
-					vscodeConnectionStatus === 'error') && (
+					vscodeConnectionStatus === 'connected' && (
 					<Box>
 						<Text
 							color={
@@ -854,8 +853,6 @@ export default function StatusLine({
 								<>
 									<Spinner type="dots" /> {t.chatScreen.ideConnecting}
 								</>
-							) : vscodeConnectionStatus === 'error' ? (
-								<>○ {t.chatScreen.ideError}</>
 							) : (
 								<>
 									● {t.chatScreen.ideConnected}
