@@ -30,6 +30,19 @@ export function getAvailableTerminalColumns(
 	return Math.max(1, getTerminalColumns(stream) - safeReservedColumns);
 }
 
+export function clearTerminalHistory(stream?: WritableStreamLike): void {
+	const target = stream ?? process.stdout;
+
+	if (!target || typeof target.write !== 'function') {
+		return;
+	}
+
+	// Clear scrollback, clear the visible screen, then move the cursor to home.
+	// This removes command/output history before Ink takes over the terminal,
+	// without resetting terminal modes like RIS (\x1bc) would.
+	target.write('\x1B[3J\x1B[2J\x1B[H');
+}
+
 export function resetTerminal(stream?: WritableStreamLike): void {
 	const target = stream ?? process.stdout;
 
@@ -39,7 +52,7 @@ export function resetTerminal(stream?: WritableStreamLike): void {
 
 	// RIS (Reset to Initial State) clears scrollback and resets terminal modes
 	target.write('\x1bc');
-	target.write('\x1B[3J\x1B[2J\x1B[H');
+	clearTerminalHistory(target);
 
 	// Re-enable focus reporting immediately after terminal reset
 	target.write('\x1b[?1004h');

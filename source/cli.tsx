@@ -169,6 +169,7 @@ import {readFileSync} from 'fs';
 import {join} from 'path';
 import {fileURLToPath} from 'url';
 import {runLegacyConfigMigration} from './utils/config/legacyConfigMigration.js';
+import {clearTerminalHistory} from './utils/execution/terminal.js';
 import {shutdownTelemetry} from './utils/telemetry/otel.js';
 
 // Migrate legacy split .snow/*.json files into the unified settings.json before
@@ -707,8 +708,9 @@ const Startup = ({
 
 // Disable bracketed paste mode on startup
 process.stdout.write('\x1b[?2004l');
-// Clear the early loading indicator
+// Clear the early loading indicator, then remove previous terminal history before TUI starts.
 process.stdout.write('\x1b[2K\r');
+clearTerminalHistory(process.stdout);
 
 // Track cleanup state to prevent multiple cleanup calls
 let isCleaningUp = false;
