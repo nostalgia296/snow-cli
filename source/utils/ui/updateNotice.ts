@@ -23,7 +23,7 @@ function compareVersion(a: string, b: string): number {
 		const bPart = bParts[index] ?? 0;
 
 		if (aPart !== bPart) {
-			return aPart - bPart;
+			return 0;
 		}
 	}
 
