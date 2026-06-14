@@ -44,6 +44,9 @@ const LanguageSettingsScreen = React.lazy(
 const ThemeSettingsScreen = React.lazy(
 	() => import('./ThemeSettingsScreen.js'),
 );
+const PrivacySettingsScreen = React.lazy(
+	() => import('./PrivacySettingsScreen.js'),
+);
 const HooksConfigScreen = React.lazy(() => import('./HooksConfigScreen.js'));
 const MCPConfigScreen = React.lazy(() => import('./MCPConfigScreen.js'));
 
@@ -78,7 +81,8 @@ type InlineView =
 	| 'hooks-config'
 	| 'mcp-config'
 	| 'language-settings'
-	| 'theme-settings';
+	| 'theme-settings'
+	| 'privacy-settings';
 
 export default function WelcomeScreen({
 	version = '1.0.0',
@@ -221,6 +225,11 @@ export default function WelcomeScreen({
 				value: 'theme',
 				infoText: t.welcome.themeSettingsInfo,
 			},
+			{
+				label: t.welcome.privacySettings,
+				value: 'privacy',
+				infoText: t.welcome.privacySettingsInfo,
+			},
 			...(hasUpdate
 				? [
 						{
@@ -302,6 +311,8 @@ export default function WelcomeScreen({
 				setInlineView('language-settings');
 			} else if (value === 'theme') {
 				setInlineView('theme-settings');
+			} else if (value === 'privacy') {
+				setInlineView('privacy-settings');
 			} else if (value === 'update-now') {
 				// Hand the terminal over to npm: unmount Ink and exec the update.
 				// runUpdateAndExit() does not return — the process exits when
@@ -458,6 +469,7 @@ export default function WelcomeScreen({
 										paddingX={2}
 										paddingY={showUpdateNoticeInLogoPane ? 1 : 0}
 										flexGrow={1}
+										flexShrink={1}
 									>
 										<ChatHeaderLogo
 											terminalWidth={logoColumnWidth}
@@ -465,13 +477,23 @@ export default function WelcomeScreen({
 											hideCompact
 											revealChars={logoRevealChars}
 										/>
-										<Box marginTop={1}>
-											<Text color="gray" dimColor>
+										<Box
+											marginTop={1}
+											width="100%"
+											justifyContent="center"
+											overflow="hidden"
+										>
+											<Text color="gray" dimColor wrap="truncate">
 												v{version} • {t.welcome.subtitle}
 											</Text>
 										</Box>
 										{showUpdateNoticeInLogoPane && updateNotice && (
-											<Box marginTop={1}>
+											<Box
+												marginTop={1}
+												width="100%"
+												justifyContent="center"
+												overflow="hidden"
+											>
 												<UpdateNotice
 													currentVersion={updateNotice.currentVersion}
 													latestVersion={updateNotice.latestVersion}
@@ -642,6 +664,16 @@ export default function WelcomeScreen({
 			{inlineView === 'theme-settings' && (
 				<Suspense fallback={loadingFallback}>
 					<ThemeSettingsScreen onBack={handleBackToMenu} inlineMode={true} />
+				</Suspense>
+			)}
+			{inlineView === 'privacy-settings' && (
+				<Suspense fallback={loadingFallback}>
+					<Box paddingX={1}>
+						<PrivacySettingsScreen
+							onBack={handleBackToMenu}
+							inlineMode={true}
+						/>
+					</Box>
 				</Suspense>
 			)}
 		</Box>

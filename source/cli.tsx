@@ -147,9 +147,12 @@ const isQuickCommand = args.some(
 		arg === '-v' ||
 		arg === '--help' ||
 		arg === '-h' ||
+		arg === '--doctor' ||
+		arg === '--update-check' ||
 		arg === '--acp' ||
 		arg === '--sse' ||
-		arg === '--sse-daemon',
+		arg === '--sse-daemon' ||
+		arg === '--loop-daemon-execute',
 );
 
 // Show loading indicator only for non-quick commands
@@ -165,6 +168,8 @@ import {setUpdateNotice} from './utils/ui/updateNotice.js';
 import Spinner from 'ink-spinner';
 import meow from 'meow';
 import {spawn} from 'child_process';
+import {runUpdateCheckAndExit} from './utils/core/updateCheck.js';
+import {runDoctorAndExit} from './utils/core/doctor.js';
 import {readFileSync} from 'fs';
 import {join} from 'path';
 import {fileURLToPath} from 'url';
@@ -261,18 +266,24 @@ const cli = meow(
 	`
 Usage
   $ snow
-  $ snow --ask \"your prompt\"
-  $ snow --ask \"your prompt\" <sessionId>
-  $ snow --task \"your task description\"
+  $ snow --ask "your prompt"
+  $ snow --ask "your prompt" <sessionId>
+  $ snow --task "your task description"
   $ snow --task-list
+  $ snow --doctor
+  $ snow --loop-daemon-execute <base64-loop-state>
 
 Options
 		--help        Show help
 		--version     Show version
+		--doctor      Run environment diagnostics
 		--update      Update to latest version
+		--update-check Check whether the environment is suitable for updating
 		-c            Skip welcome screen and resume last conversation (optionally specify sessionId)
 		--ask         Quick question mode (headless mode with single prompt, optional sessionId for continuous conversation)
 		--task        Create a background AI task (headless mode, saves session)
+		--task-list   Show background AI task list
+		--loop-daemon-execute Start or continue a detached loop daemon from encoded state (internal)
 		--yolo        Skip welcome screen and enable YOLO mode (auto-approve tools)
 		--yolo-p      Skip welcome screen and enable YOLO+Plan mode
 		--c-yolo      Skip welcome screen, resume last conversation, and enable YOLO mode
@@ -295,6 +306,15 @@ Options
 				type: 'boolean',
 				default: false,
 			},
+			doctor: {
+				type: 'boolean',
+				default: false,
+			},
+			updateCheck: {
+				type: 'boolean',
+				default: false,
+				alias: 'update-check',
+			},
 			c: {
 				type: 'boolean',
 				default: false,
@@ -310,6 +330,10 @@ Options
 			taskExecute: {
 				type: 'string',
 				alias: 'task-execute',
+			},
+			loopDaemonExecute: {
+				type: 'string',
+				alias: 'loop-daemon-execute',
 			},
 			yolo: {
 				type: 'boolean',
@@ -375,6 +399,15 @@ Options
 		},
 	},
 );
+// Handle doctor flag
+if (cli.flags.doctor) {
+	runDoctorAndExit(VERSION, packageJson);
+}
+
+// Handle update check flag
+if (cli.flags.updateCheck) {
+	runUpdateCheckAndExit(VERSION);
+}
 
 // Handle update flag
 if (cli.flags.update) {
@@ -563,6 +596,21 @@ if (cli.flags.task) {
 	console.log(`Task created: ${task.id}`);
 	console.log(`Title: ${task.title}`);
 	console.log(`Use "snow --task-list" to view task status`);
+	process.exit(0);
+}
+
+// Handle loop daemon execution (internal use by detached loop daemon)
+if (cli.flags.loopDaemonExecute) {
+	const {loopManager} = await import('./utils/task/loopManager.js');
+	const payload = Buffer.from(cli.flags.loopDaemonExecute, 'base64').toString(
+		'utf-8',
+	);
+	const state = JSON.parse(payload);
+	if (state.cwd) {
+		process.chdir(state.cwd);
+	}
+
+	await loopManager.runDaemonLoop(state);
 	process.exit(0);
 }
 

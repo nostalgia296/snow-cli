@@ -1,4 +1,5 @@
 import {executeMCPTool} from './mcpToolsManager.js';
+import {maskToolResultContentIfNeeded} from '../../api/privacyMask.js';
 import {subAgentService} from '../../mcp/subagent.js';
 import {teamService} from '../../mcp/team.js';
 import {runningSubAgentTracker} from './runningSubAgentTracker.js';
@@ -230,6 +231,7 @@ export async function executeToolCall(
 	addToAlwaysApproved?: AddToAlwaysApprovedCallback,
 	onUserInteractionNeeded?: UserInteractionCallback,
 	sessionId?: string,
+	workingDirectory?: string,
 ): Promise<ToolResult> {
 	let result: ToolResult | undefined;
 	let executionError: Error | null = null;
@@ -646,6 +648,14 @@ export async function executeToolCall(
 				console.warn('Failed to execute afterToolCall hook:', error);
 			}
 
+			if (result && !executionError && !result.hookFailed) {
+				result.content = await maskToolResultContentIfNeeded(
+					toolCall.function.name,
+					result.content,
+					workingDirectory,
+				);
+			}
+
 			const telemetryStatus =
 				result?.messageStatus === 'error' || result?.hookFailed
 					? 'error'
@@ -805,6 +815,7 @@ export async function executeToolCalls(
 	addToAlwaysApproved?: AddToAlwaysApprovedCallback,
 	onUserInteractionNeeded?: UserInteractionCallback,
 	sessionId?: string,
+	workingDirectory?: string,
 ): Promise<ToolResult[]> {
 	// Group tool calls by their resource identifier
 	const resourceGroups = new Map<string, ToolCall[]>();
@@ -845,6 +856,7 @@ export async function executeToolCalls(
 					addToAlwaysApproved,
 					onUserInteractionNeeded,
 					sessionId,
+					workingDirectory,
 				);
 				groupResults.push(result);
 

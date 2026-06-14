@@ -17,8 +17,6 @@
 
 **Telegram**: [https://t.me/snow_cli](https://t.me/snow_cli)
 
-**AI Community**: [https://linux.do](https://linux.do)
-
 _Agentic coding in your terminal_
 
 </div>
@@ -104,6 +102,8 @@ winget install Microsoft.WindowsTerminal
 - [Custom StatusLine Guide](docs/usage/en/21.Custom%20StatusLine%20Guide.md) - User-level StatusLine plugins, hook structure, override behavior, bilingual examples
 - [Team Mode Guide](docs/usage/en/22.Team%20Mode%20Guide.md) - Multi-agent collaboration, parallel task execution, team management
 - [Custom Search Engine Guide](docs/usage/en/23.Custom%20Search%20Engine%20Guide.md) - User-level search engine plugins, engine contract, enable flag, minimal template
+- [Privacy Settings Guide](docs/usage/en/24.Privacy%20Settings%20Guide.md) - Local privacy filter API deployment, Snow CLI privacy configuration, tool result redaction, and troubleshooting
+- [Buddy Companion Guide](docs/usage/en/25.Buddy%20Companion%20Guide.md) - Terminal buddy companion commands, hatching, species selection, interaction, mute, and reset
 
 ### Recommended ROLE.md
 

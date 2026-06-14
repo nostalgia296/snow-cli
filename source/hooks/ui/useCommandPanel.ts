@@ -11,6 +11,7 @@ import {getCustomCommands} from '../../utils/commands/custom.js';
 import {commandUsageManager} from '../../utils/session/commandUsageManager.js';
 import {runningSubAgentTracker} from '../../utils/execution/runningSubAgentTracker.js';
 import {teamTracker} from '../../utils/execution/teamTracker.js';
+import {getAllProfiles} from '../../utils/config/configManager.js';
 import {
 	findInlineCommandTrigger,
 	isInlineCommand,
@@ -31,6 +32,21 @@ export type CommandPanelCommand = {
 	insertionText?: string;
 };
 
+export type CommandArgOption =
+	| string
+	| {
+			label: string;
+			value: string;
+	  };
+
+export function getCommandArgOptionLabel(option: CommandArgOption): string {
+	return typeof option === 'string' ? option : option.label;
+}
+
+export function getCommandArgOptionValue(option: CommandArgOption): string {
+	return typeof option === 'string' ? option : option.value;
+}
+
 // 指令参数提示：当用户输入 /cmd 后（尚未补充参数），在输入框末尾以暗色显示可用参数组合
 // key 为指令名（不含斜杠），value 为提示文本（不含前导空格）
 export const COMMAND_ARGS_HINTS: Record<string, string> = {
@@ -39,9 +55,10 @@ export const COMMAND_ARGS_HINTS: Record<string, string> = {
 	reindex: '[-force]',
 	codebase: '[on|off|status]',
 	'auto-format': '[on|off|status]',
+	buddy: '[status|hatch|pet|rename|say|profile|mute|unmute|reset]',
 	simple: '[on|off|status]',
 	'add-dir': '[path]',
-	loop: '<interval> <prompt> | list | tasks | cancel <id>',
+	loop: '[daemon] <interval> <prompt> | daily HH:mm <prompt> | at HH:mm <prompt> | list | tasks | cancel <id>',
 	goal: '<objective> [--budget=N] | pause | resume | clear | status',
 	init: '[prompt]',
 	role: '[-l|--list | -d|--delete]',
@@ -57,19 +74,57 @@ export const COMMAND_ARGS_HINTS: Record<string, string> = {
 
 // 指令参数可选值列表：用于 Tab 弹出参数选择面板
 // key 为指令名（不含斜杠），value 为可选参数值数组
-export const COMMAND_ARGS_OPTIONS: Record<string, string[]> = {
+export const COMMAND_ARGS_OPTIONS: Record<string, CommandArgOption[]> = {
 	codebase: ['on', 'off', 'status'],
 	'auto-format': ['on', 'off', 'status'],
+	buddy: [
+		'status',
+		'hatch',
+		'pet',
+		'rename',
+		'say',
+		'profile',
+		'mute',
+		'unmute',
+		'reset',
+	],
 	simple: ['on', 'off', 'status'],
 	reindex: ['-force'],
 	role: ['-l', '-d'],
 	skills: ['-l'],
 	'role-subagent': ['-l', '-d'],
 	'subagent-depth': ['status'],
-	loop: ['list', 'tasks', 'cancel'],
+	loop: ['daemon', 'daily', 'at', 'list', 'tasks', 'cancel'],
 	export: ['txt', 'md', 'html', 'json'],
 	config: ['export', 'import'],
 };
+
+function getBuddyProfileArgOptions(): CommandArgOption[] {
+	return [
+		'list',
+		'current',
+		'default',
+		'reset',
+		...getAllProfiles().map(profile => ({
+			label: `${profile.name}${profile.isActive ? ' (active)' : ''}`,
+			value: profile.name,
+		})),
+	];
+}
+
+export function getCommandArgsOptions(
+	commandName: string,
+	inputText?: string,
+): CommandArgOption[] {
+	if (
+		commandName === 'buddy' &&
+		/^\/buddy\s+profile\s*$/.test(inputText ?? '')
+	) {
+		return getBuddyProfileArgOptions();
+	}
+
+	return COMMAND_ARGS_OPTIONS[commandName] ?? [];
+}
 
 export function useCommandPanel(buffer: TextBuffer, isProcessing = false) {
 	const {t} = useI18n();
@@ -167,7 +222,7 @@ export function useCommandPanel(buffer: TextBuffer, isProcessing = false) {
 				name: 'loop',
 				description:
 					t.commandPanel.commands.loop ||
-					'Schedule a session-scoped recurring task. Usage: /loop 5m <prompt>',
+					'Schedule recurring tasks. Usage: /loop 5m <prompt> or /loop daily 09:30 <prompt>',
 			},
 			{
 				name: 'subagent-depth',
@@ -249,6 +304,12 @@ export function useCommandPanel(buffer: TextBuffer, isProcessing = false) {
 				description:
 					t.commandPanel.commands.simple ||
 					'Toggle theme simple mode. Usage: /simple [on|off|status]',
+			},
+			{
+				name: 'buddy',
+				description:
+					t.commandPanel.commands.buddy ||
+					'Manage your terminal companion. Usage: /buddy [hatch|pet|rename|say|mute|unmute|status|reset]',
 			},
 			{
 				name: 'tool-search',

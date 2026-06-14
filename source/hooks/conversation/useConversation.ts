@@ -4,6 +4,13 @@ import type {Message} from '../../ui/components/chat/MessageList.js';
 import {connectionManager} from '../../utils/connection/ConnectionManager.js';
 import {sessionManager} from '../../utils/session/sessionManager.js';
 import {recordTurnContent, withTurnSpan} from '../../utils/telemetry/otel.js';
+import {getCompanion, isCompanionMuted} from '../../buddy/companion.js';
+import {
+	generateBuddyContextReply,
+	generateBuddyInProgressReply,
+	shouldGenerateBuddyInProgressReply,
+} from '../../buddy/buddyAi.js';
+import {companionReaction} from '../../buddy/companionEvents.js';
 import {extractThinkingContent} from './utils/thinkingExtractor.js';
 import {EncoderManager} from './core/encoderManager.js';
 import {
@@ -14,6 +21,7 @@ import {processStreamRound} from './core/streamProcessor.js';
 import {handleToolCallRound} from './core/toolCallRoundHandler.js';
 import {handleOnStopHooks} from './core/onStopHookHandler.js';
 import type {
+	BuddyProgressEvent,
 	ConversationHandlerOptions,
 	ConversationUsage,
 } from './core/conversationTypes.js';
@@ -22,6 +30,11 @@ export type {
 	ConversationHandlerOptions,
 	UserQuestionResult,
 } from './core/conversationTypes.js';
+
+const BUDDY_IN_PROGRESS_COOLDOWN_MS = 45_000;
+let buddyInProgressActive = false;
+let lastBuddyInProgressAt = 0;
+let lastBuddyInProgressKey = '';
 
 /**
  * Handle conversation with streaming and tool calls.
@@ -74,7 +87,6 @@ async function runConversationWithTools(
 		setIsReasoning,
 		setRetryStatus,
 	} = options;
-
 	const addToAlwaysApproved = (toolName: string) => {
 		addMultipleToAlwaysApproved([toolName]);
 	};
@@ -90,6 +102,19 @@ async function runConversationWithTools(
 		teamMode: options.teamMode,
 		toolSearchDisabled: options.toolSearchDisabled,
 	});
+
+	const onBuddyProgress: ConversationHandlerOptions['onBuddyProgress'] =
+		event => {
+			void triggerBuddyInProgressReaction(
+				conversationMessages,
+				controller.signal,
+				event,
+			);
+		};
+	const runtimeOptions: ConversationHandlerOptions = {
+		...options,
+		onBuddyProgress,
+	};
 
 	await appendUserMessageAndSyncContext({
 		conversationMessages,
@@ -142,7 +167,7 @@ async function runConversationWithTools(
 				setIsReasoning,
 				setRetryStatus,
 				setContextUsage,
-				options,
+				options: runtimeOptions,
 			});
 
 			setStreamTokenCount(0);
@@ -174,7 +199,7 @@ async function runConversationWithTools(
 					addToAlwaysApproved,
 					yoloModeRef,
 					streamingEnabled: config.streamingDisplay !== false,
-					options,
+					options: runtimeOptions,
 				});
 
 				if (toolLoopResult.type === 'break') {
@@ -238,6 +263,11 @@ async function runConversationWithTools(
 				if (hookResult.shouldContinue) {
 					continue;
 				}
+
+				await triggerBuddyContextReaction(
+					conversationMessages,
+					controller.signal,
+				);
 			}
 
 			break;
@@ -266,6 +296,84 @@ async function runConversationWithTools(
 	}
 
 	return {usage: accumulatedUsage};
+}
+
+async function triggerBuddyContextReaction(
+	conversationMessages: ChatMessage[],
+	abortSignal: AbortSignal,
+): Promise<void> {
+	if (abortSignal.aborted || isCompanionMuted()) {
+		return;
+	}
+
+	const companion = getCompanion();
+	if (!companion) {
+		return;
+	}
+
+	try {
+		const reply = await generateBuddyContextReply(
+			companion,
+			conversationMessages,
+			abortSignal,
+		);
+		if (!abortSignal.aborted && !isCompanionMuted() && reply.trim()) {
+			companionReaction(reply);
+		}
+	} catch (error) {
+		console.error('Failed to generate buddy context reaction:', error);
+	}
+}
+
+async function triggerBuddyInProgressReaction(
+	conversationMessages: ChatMessage[],
+	abortSignal: AbortSignal,
+	event: BuddyProgressEvent,
+): Promise<void> {
+	if (abortSignal.aborted || isCompanionMuted() || buddyInProgressActive) {
+		return;
+	}
+
+	const eventKey = `${event.stage}:${event.summary ?? ''}`;
+	const now = Date.now();
+	if (
+		eventKey === lastBuddyInProgressKey ||
+		now - lastBuddyInProgressAt < BUDDY_IN_PROGRESS_COOLDOWN_MS
+	) {
+		return;
+	}
+
+	const companion = getCompanion();
+	if (!companion) {
+		return;
+	}
+
+	const context = {
+		stage: event.stage,
+		summary: event.summary,
+		conversationMessages,
+	};
+	if (!shouldGenerateBuddyInProgressReply(companion, context)) {
+		return;
+	}
+
+	buddyInProgressActive = true;
+	try {
+		const reply = await generateBuddyInProgressReply(
+			companion,
+			context,
+			abortSignal,
+		);
+		if (!abortSignal.aborted && !isCompanionMuted() && reply.trim()) {
+			lastBuddyInProgressAt = Date.now();
+			lastBuddyInProgressKey = eventKey;
+			companionReaction(reply);
+		}
+	} catch (error) {
+		console.error('Failed to generate buddy in-progress reaction:', error);
+	} finally {
+		buddyInProgressActive = false;
+	}
 }
 
 function mergeUsage(

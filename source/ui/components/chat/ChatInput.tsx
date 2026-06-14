@@ -21,7 +21,8 @@ import {useInputBuffer} from '../../../hooks/input/useInputBuffer.js';
 import {
 	useCommandPanel,
 	COMMAND_ARGS_HINTS,
-	COMMAND_ARGS_OPTIONS,
+	getCommandArgsOptions,
+	type CommandArgOption,
 } from '../../../hooks/ui/useCommandPanel.js';
 import {
 	findInlineCommandTrigger,
@@ -265,6 +266,7 @@ type Props = {
 	onSwitchProfile?: () => void; // Callback when Ctrl+P is pressed to switch profile
 	onCopyInputSuccess?: () => void;
 	onCopyInputError?: (errorMessage: string) => void;
+	reservedColumns?: number;
 	disableKeyboardNavigation?: boolean; // Disable arrow keys and Ctrl+K when background panel is active
 };
 
@@ -302,6 +304,7 @@ export default function ChatInput({
 	onSwitchProfile,
 	onCopyInputSuccess,
 	onCopyInputError,
+	reservedColumns = 0,
 	disableKeyboardNavigation = false,
 }: Props) {
 	// Use i18n hook for translations
@@ -320,7 +323,12 @@ export default function ChatInput({
 
 	// Recalculate viewport dimensions to ensure proper resizing
 	const uiOverhead = 8;
-	const viewportWidth = Math.max(40, terminalWidth - uiOverhead);
+	const effectiveReservedColumns = Math.max(0, reservedColumns);
+	const inputTerminalWidth = Math.max(
+		40,
+		terminalWidth - effectiveReservedColumns,
+	);
+	const viewportWidth = Math.max(40, inputTerminalWidth - uiOverhead);
 	const viewport: Viewport = useMemo(
 		() => ({
 			width: viewportWidth,
@@ -353,16 +361,19 @@ export default function ChatInput({
 	const [argsSelectedIndex, setArgsSelectedIndex] = React.useState(0);
 
 	// Compute current command name and its available args options
-	const argsPickerContext = useMemo(() => {
+	const argsPickerContext = useMemo<{
+		commandName: string;
+		options: CommandArgOption[];
+	}>(() => {
 		const text = buffer.text;
-		const rootMatch = text.match(/^\/([a-zA-Z0-9_-]+)\s*$/);
+		const rootMatch = text.match(/^\/([a-zA-Z0-9_-]+)(?:\s+\S+)*\s*$/);
 		const inlineTrigger = findInlineCommandTrigger(
 			text,
 			buffer.getCursorPosition(),
 		);
 		const cmd = rootMatch?.[1] ?? inlineTrigger?.query ?? '';
-		const options = COMMAND_ARGS_OPTIONS[cmd];
-		return {commandName: cmd, options: options || []};
+		const options = getCommandArgsOptions(cmd, text);
+		return {commandName: cmd, options};
 	}, [buffer, buffer.text]);
 
 	// Use file picker hook
@@ -1094,7 +1105,7 @@ export default function ChatInput({
 	};
 
 	return (
-		<Box flexDirection="column" paddingX={1} width={terminalWidth}>
+		<Box flexDirection="column" paddingX={1} width={inputTerminalWidth}>
 			<Suspense fallback={null}>
 				<RollbackMenuPanel
 					isVisible={showHistoryMenu}
@@ -1107,7 +1118,7 @@ export default function ChatInput({
 			</Suspense>
 			{!showHistoryMenu && (
 				<>
-					<Box flexDirection="column" width={terminalWidth - 2}>
+					<Box flexDirection="column" width={inputTerminalWidth - 2}>
 						<Text
 							color={
 								isPureBashMode
@@ -1120,8 +1131,8 @@ export default function ChatInput({
 							}
 						>
 							{buffer.isExpandedView
-								? '═'.repeat(terminalWidth - 2)
-								: '─'.repeat(terminalWidth - 2)}
+								? '═'.repeat(inputTerminalWidth - 2)
+								: '─'.repeat(inputTerminalWidth - 2)}
 						</Text>
 						<Box flexDirection="row">
 							<Text
@@ -1159,8 +1170,8 @@ export default function ChatInput({
 								}
 							>
 								{buffer.isExpandedView
-									? '═'.repeat(terminalWidth - 2)
-									: '─'.repeat(terminalWidth - 2)}
+									? '═'.repeat(inputTerminalWidth - 2)
+									: '─'.repeat(inputTerminalWidth - 2)}
 							</Text>
 						</Box>
 						{buffer.isExpandedView && (
